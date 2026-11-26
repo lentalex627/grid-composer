@@ -1,6 +1,6 @@
 "use client";
 
-import { GridComposer } from "@/components/table-forge/table-forge";
+import { GridComposer } from "@/components/grid-composer";
 
 function GridComposerPage() {
   return (

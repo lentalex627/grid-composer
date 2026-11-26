@@ -3,7 +3,7 @@
  * Export all grid-composer components from a single entry point
  */
 
-export { GridComposer } from "./table-forge";
+export { GridComposer } from "./grid-composer";
 export { TableBuilder } from "./table-builder";
 export { EditableCell } from "./editable-cell";
 export { CellFormatToolbar } from "./cell-format-toolbar";
