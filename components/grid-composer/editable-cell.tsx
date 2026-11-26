@@ -28,13 +28,6 @@ export function EditableCell({
   const [editValue, setEditValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Update edit value when prop value changes
-  useEffect(() => {
-    if (!isEditing) {
-      setEditValue(value);
-    }
-  }, [value, isEditing]);
-
   // Focus input when entering edit mode
   useEffect(() => {
     if (isEditing && inputRef.current) {

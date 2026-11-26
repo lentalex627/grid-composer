@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useMarketplaceClient } from "@/components/providers/marketplace";
+import { normalizeFieldValue, useMarketplaceClient } from "@/components/providers/marketplace";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
@@ -21,6 +21,10 @@ import { Save, X, AlertCircle } from "lucide-react";
  * This component integrates with Sitecore XM Cloud as a custom field,
  * providing an interactive table builder interface.
  */
+function contentKey(data: TableData): string {
+  return JSON.stringify({ ...data, metadata: undefined });
+}
+
 export function GridComposer() {
   const client = useMarketplaceClient();
 
@@ -44,13 +48,13 @@ export function GridComposer() {
         setIsLoading(true);
         setError(null);
 
-        // Get current field value from Sitecore
-        const fieldValue = await client.getValue();
-        console.log("Loaded field value:", fieldValue);
+        // Get current field value from Sitecore. Depending on the host it can
+        // arrive as a JSON string or an already-parsed object.
+        const fieldValue = normalizeFieldValue(await client.getValue());
 
         let parsedData: TableData | null = null;
 
-        if (fieldValue && typeof fieldValue === "string" && fieldValue.trim()) {
+        if (fieldValue) {
           // Try to parse existing data
           parsedData = parseTableData(fieldValue);
 
@@ -92,8 +96,10 @@ export function GridComposer() {
    */
   const handleTableChange = (newData: TableData) => {
     setTableData(newData);
-    const newSerialized = serializeTableData(newData);
-    setIsDirty(newSerialized !== originalData);
+    // Compare content only. serializeTableData stamps metadata.modified on
+    // every call, so comparing full JSON would always look dirty.
+    const original = originalData ? parseTableData(originalData) : null;
+    setIsDirty(!original || contentKey(newData) !== contentKey(original));
     setSuccessMessage(null);
   };
 
@@ -124,7 +130,8 @@ export function GridComposer() {
       setIsDirty(false);
       setSuccessMessage("Table saved successfully!");
 
-      console.log("Table saved successfully");
+      // Same pattern as the Sitecore custom field sample: save, then close
+      await client.closeApp();
     } catch (err) {
       console.error("Error saving table:", err);
       setError(
@@ -212,6 +219,14 @@ export function GridComposer() {
                   </div>
                 )}
                 <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void client.closeApp()}
+                  disabled={isSaving}
+                >
+                  Close
+                </Button>
+                <Button
                   variant="outline"
                   size="sm"
                   onClick={handleCancel}
@@ -219,7 +234,7 @@ export function GridComposer() {
                   className="transition-all hover:scale-105 disabled:scale-100"
                 >
                   <X className="h-4 w-4 mr-2" />
-                  Cancel
+                  Undo changes
                 </Button>
                 <Button
                   size="sm"
@@ -228,7 +243,7 @@ export function GridComposer() {
                   className="bg-gradient-to-r from-primary to-primary/90 transition-all hover:scale-105 disabled:scale-100 shadow-md hover:shadow-lg"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {isSaving ? "Saving..." : "Save Table"}
+                  {isSaving ? "Saving..." : "Save & close"}
                 </Button>
               </div>
             </div>
